@@ -1,5 +1,5 @@
-
-
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Abdeslam
@@ -21,6 +21,14 @@ public class Pays {
      */
     private String langue;
 
+
+    /**
+     * liste des pilotes
+     */
+    private List<Pilote> listeDesPilotes ;
+
+
+
     /**
      * constructeur paramétré
      * @param sigle sigle du pays
@@ -32,6 +40,7 @@ public class Pays {
         this.sigle = sigle;
         this.nom = nom;
         this.langue = langue;
+        this.listeDesPilotes = new ArrayList<>();
     }
 
     /**
@@ -80,6 +89,32 @@ public class Pays {
      */
     public void setLangue(String langue) {
         this.langue = langue;
+    }
+
+    // Méthode pour les pilotes dans la liste
+    public void ajouterPilote(Pilote pilote) {
+        this.listeDesPilotes.add(pilote);
+    }
+
+    // Méthode pour les retire les pilotes depuis la liste
+    public void retirerPilote(Pilote pilote) {
+        this.listeDesPilotes.remove(pilote);
+    }
+
+
+    /**
+     * getter ListeDesPilotes
+     * @return ListeDesPilotes
+     */
+    public List<Pilote> getListeDesPilotes() {
+        return this.listeDesPilotes;
+    }
+    /**
+     * setter ListeDesPilotes
+     * @return ListeDesPilotes
+     */
+    public void setListeDesPilotes(List<Pilote> listeDesPilotes) {
+        this.listeDesPilotes = listeDesPilotes;
     }
 
     /**

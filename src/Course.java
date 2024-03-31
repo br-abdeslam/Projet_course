@@ -37,6 +37,8 @@ public class Course {
      */
     private List<Classement> listeCoureursPlaceGain;
 
+    private Set<String> matriculesUniques;
+
     /**
      * constructeur parametré
      * @param nom nom de la course
@@ -52,15 +54,19 @@ public class Course {
         this.km = km;
         this.ville = ville;
         this.listeCoureursPlaceGain = new ArrayList<>();
+        this.matriculesUniques = new HashSet<>();
     }
 
     /**
-     * methode qui recois en parametre un classement d'un pilote, et elle l'ajouter a la liste des classement
-     * @param classement
+     * methode qui recois en parametre un pilote, puis nous verifions que le pilote n'est pas deja present et si ca le cas on l'ajoute a la liste listeCoureursPlaceGain
+     * @param pilote
      */
-    public void addCoureur(Classement classement) {
-
-        listeCoureursPlaceGain.add(classement);
+    public void addCoureur(Pilote pilote) {
+        if (!matriculesUniques.contains(pilote.getMatricule())) {
+            matriculesUniques.add(pilote.getMatricule());
+            Classement nouveauClassement = new Classement(0, BigDecimal.ZERO, pilote);
+            listeCoureursPlaceGain.add(nouveauClassement);
+        }
     }
 
     /**
@@ -105,24 +111,35 @@ public class Course {
      * @param gain
      */
     public Pilote modif(Pilote pilote, int nouvellePlace, BigDecimal gain) {
-        for (Classement classement : listeCoureursPlaceGain) {
-            if (classement.getPlace() == nouvellePlace) {
-                // Place déjà prise par un autre pilote
-                return classement.getPilote();
-            }
-        }
-
-        // Si la place n'est pas prise, mettre à jour le classement du pilote
+        // Vérifier si le pilote existe dans la course
+        Classement classementPilote = null;
         for (Classement classement : listeCoureursPlaceGain) {
             if (classement.getPilote().equals(pilote)) {
-                classement.setPlace(nouvellePlace);
-                classement.setGain(gain);
+                classementPilote = classement;
                 break;
             }
         }
 
-        return null; // La modification a réussi
+        // Si le pilote n'existe pas, retourner null
+        if (classementPilote == null) {
+            return null;
+        }
+
+        // Vérifier si la nouvelle place est déjà prise
+        for (Classement classement : listeCoureursPlaceGain) {
+            if (classement.getPlace() == nouvellePlace) {
+                // Retourner le pilote qui occupe déjà cette place
+                return classement.getPilote();
+            }
+        }
+
+        // Aucun conflit, on met à jour la place et le gain du pilote
+        classementPilote.setPlace(nouvellePlace);
+        classementPilote.setGain(gain);
+        return null; // Retourner null pour indiquer que la modification a réussi sans conflit
     }
+
+
 
     /**
      * methode pour afficher les coureurs avec leur place et gain
@@ -175,24 +192,27 @@ public class Course {
 
     /**
      * methode pour trouver les pilotes d'un pays spécifique
-     * @param pays
+     * @param nomPays
      * @return pilotesDuPays
      */
-    public List<Pilote> listeCoureursDuPays(Pays pays) {
+    public List<Pilote> listeCoureursDuPays(String nomPays) {
         List<Pilote> pilotesDuPays = new ArrayList<>();
         for (Classement classement : listeCoureursPlaceGain) {
             Pilote pilote = classement.getPilote();
-            if (pilote.getPays().equals(pays)) {
+            if (pilote.getPays().getNom().equals(nomPays)) {
                 pilotesDuPays.add(pilote);
             }
         }
         return pilotesDuPays;
     }
 
+
+
     /**
      * methode pour vérifie si tous les coureurs ont une place assignée
      * @return boolean
      */
+
     public boolean classementComplet() {
         for (Classement classement : listeCoureursPlaceGain) {
             if (classement.getPlace() == 0) {
@@ -313,4 +333,16 @@ public class Course {
         return "Course: " + " Nom de course:  " + nom + "priceMoney= " + priceMoney + "\tDate de course=" + dateCourse + "\tKm total= " + km + "\tVille=" + ville + "\tlisteCoureursPlaceGain=" + listeCoureursPlaceGain+ "\n";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Course course = (Course) o;
+        return km == course.km && Objects.equals(nom, course.nom) && Objects.equals(priceMoney, course.priceMoney) && Objects.equals(dateCourse, course.dateCourse) && Objects.equals(ville, course.ville) && Objects.equals(listeCoureursPlaceGain, course.listeCoureursPlaceGain);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(nom, priceMoney, dateCourse, km, ville, listeCoureursPlaceGain);
+    }
 }
