@@ -6,112 +6,211 @@ import java.util.Scanner;
 
 public class GestPays {
 
-    private final Scanner sc = new Scanner(System.in);
+    private Scanner sc = new Scanner(System.in);
     private Connection dbConnect;
 
-    public GestPays() {
-        this.dbConnect = DBConnection.getConnection();
-        if (this.dbConnect == null) {
-            System.err.println("La connexion n'a pas pu être établie. Vérifiez vos paramètres de connexion.");
+    public void gestion() {
+        dbConnect = DBConnection.getConnection();
+        if (dbConnect == null) {
             System.exit(1);
         }
+        System.out.println("Connexion établie.");
+        int choix;
+        do {
+            System.out.println("1. Ajouter un pays\n2. Rechercher un pays\n3. Modifier un pays\n4. Supprimer un pays\n5. Afficher les pays\n6. Quitter");
+            System.out.print("Votre choix : ");
+            choix = sc.nextInt();
+            sc.nextLine();
+            switch (choix) {
+                case 1:
+                    ajouterPays();
+                    break;
+                case 2:
+                    recherchePays();
+                    break;
+                case 3:
+                    modifierPays();
+                    break;
+                case 4:
+                    supprimerPays();
+                    break;
+                case 5:afficherTousLesPays();
+                    break;
+                case 6:
+                    System.out.println("Fin du programme.");
+                    break;
+                default:
+                    System.out.println("Choix invalide, veuillez réessayer.");
+            }
+        } while (choix != 6);
     }
 
-    public void ajout() {
-        System.out.print("Entrez le sigle du pays : ");
+
+
+    public void ajouterPays() {
+        System.out.print("Sigle : ");
         String sigle = sc.nextLine();
-        System.out.print("Entrez le nom du pays : ");
+        System.out.print("Nom : ");
         String nom = sc.nextLine();
-        System.out.print("Entrez la langue principale du pays : ");
+        System.out.print("Langue : ");
         String langue = sc.nextLine();
 
-        String sql = "INSERT INTO Pays (sigle, nom, langue) VALUES (?, ?, ?)";
-        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
-            pstmt.setString(1, sigle);
-            pstmt.setString(2, nom);
-            pstmt.setString(3, langue);
+        String queryInsert = "INSERT INTO pays (sigle, nom, langue) VALUES (?, ?, ?)";
+        String querySelect = "SELECT Id_pays FROM pays WHERE sigle = ? AND nom = ? AND langue = ?";
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
-                System.out.println("Le pays a été ajouté avec succès.");
-            } else {
-                System.out.println("Aucune ligne ajoutée à la base de données.");
+        try (PreparedStatement pstm1 = dbConnect.prepareStatement(queryInsert);
+             PreparedStatement pstm2 = dbConnect.prepareStatement(querySelect)) {
+
+            // Exécution de la requête d'insertion
+            pstm1.setString(1, sigle);
+            pstm1.setString(2, nom);
+            pstm1.setString(3, langue);
+            int n = pstm1.executeUpdate();
+            System.out.println(n + " ligne insérée");
+
+            // Récupération de l'ID du pays si l'insertion a réussi
+            if (n == 1) {
+                pstm2.setString(1, sigle);
+                pstm2.setString(2, nom);
+                pstm2.setString(3, langue);
+                try (ResultSet rs = pstm2.executeQuery()) {
+                    if (rs.next()) {
+                        int idPays = rs.getInt(1);
+                        System.out.println("Id_pays = " + idPays);
+                    } else {
+                        System.out.println("Pays introuvable");
+                    }
+                }
             }
+
         } catch (SQLException e) {
-            System.out.println("Erreur lors de l'ajout du pays : " + e.getMessage());
+            System.out.println("Erreur SQL : " + e);
         }
     }
 
-    public void recherche() {
-        System.out.print("Entrez le sigle du pays à rechercher : ");
-        String sigle = sc.nextLine();
 
-        String sql = "SELECT * FROM Pays WHERE sigle = ?";
-        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
-            pstmt.setString(1, sigle);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
+    public void recherchePays() {
+        System.out.println("Rechercher par :\n1. Sigle\n2. Nom\n3. Langue");
+        System.out.print("Votre choix : ");
+        int choix = sc.nextInt();
+        sc.nextLine(); // consommer le reste de la ligne
+
+        String champRecherche;
+        switch (choix) {
+            case 1:
+                champRecherche = "sigle";
+                break;
+            case 2:
+                champRecherche = "nom";
+                break;
+            case 3:
+                champRecherche = "langue";
+                break;
+            default:
+                System.out.println("Choix invalide");
+                return;
+        }
+
+        System.out.print("Entrez la valeur de recherche : ");
+        String valeurRecherche = sc.nextLine();
+
+        String query = "SELECT * FROM pays WHERE " + champRecherche + " LIKE ?";
+        try (PreparedStatement stmt = dbConnect.prepareStatement(query)) {
+            stmt.setString(1, "%" + valeurRecherche + "%");
+
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                int idPays = rs.getInt("Id_pays");
+                String sigle = rs.getString("sigle");
                 String nom = rs.getString("nom");
                 String langue = rs.getString("langue");
-                System.out.printf("Sigle : %s, Nom : %s, Langue : %s%n", sigle, nom, langue);
-            } else {
-                System.out.println("Aucun pays trouvé avec le sigle " + sigle);
+                System.out.println("ID: " + idPays + ", Sigle: " + sigle + ", Nom: " + nom + ", Langue: " + langue);
             }
+
         } catch (SQLException e) {
-            System.out.println("Erreur lors de la recherche : " + e.getMessage());
+            System.out.println("Erreur SQL : " + e);
         }
     }
 
-    public void modification() {
-        System.out.print("Entrez le sigle du pays à modifier : ");
-        String sigle = sc.nextLine();
-        System.out.print("Entrez le nouveau nom du pays : ");
-        String nom = sc.nextLine();
-        System.out.print("Entrez la nouvelle langue du pays : ");
-        String langue = sc.nextLine();
+    public void modifierPays() {
+        System.out.print("ID du pays à modifier : ");
+        int idPays = sc.nextInt();
+        sc.nextLine(); // consommer le reste de la ligne
 
-        String sql = "UPDATE Pays SET nom = ?, langue = ? WHERE sigle = ?";
-        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
-            pstmt.setString(1, nom);
-            pstmt.setString(2, langue);
-            pstmt.setString(3, sigle);
+        System.out.print("Nouveau sigle : ");
+        String nouveauSigle = sc.nextLine();
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
-                System.out.println("Le pays a été mis à jour avec succès.");
+        System.out.print("Nouveau nom : ");
+        String nouveauNom = sc.nextLine();
+
+        System.out.print("Nouvelle langue : ");
+        String nouvelleLangue = sc.nextLine();
+
+        String query = "UPDATE pays SET sigle = ?, nom = ?, langue = ? WHERE Id_pays = ?";
+
+        try (PreparedStatement pstm = dbConnect.prepareStatement(query)) {
+            pstm.setString(1, nouveauSigle);
+            pstm.setString(2, nouveauNom);
+            pstm.setString(3, nouvelleLangue);
+            pstm.setInt(4, idPays);
+
+            int n = pstm.executeUpdate();
+            if (n != 0) {
+                System.out.println(n + " ligne mise à jour");
             } else {
-                System.out.println("Aucun pays trouvé avec le sigle " + sigle + " ou aucune modification nécessaire.");
+                System.out.println("Record introuvable");
             }
+
         } catch (SQLException e) {
-            System.out.println("Erreur lors de la modification : " + e.getMessage());
+            System.out.println("Erreur SQL : " + e);
         }
     }
 
-    public void suppression() {
-        System.out.print("Entrez le sigle du pays à supprimer : ");
-        String sigle = sc.nextLine();
 
-        String sql = "DELETE FROM Pays WHERE sigle = ?";
-        try (PreparedStatement pstmt = dbConnect.prepareStatement(sql)) {
-            pstmt.setString(1, sigle);
 
-            int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
-                System.out.println("Le pays a été supprimé avec succès.");
+    public void supprimerPays() {
+        System.out.print("ID du pays à supprimer : ");
+        int idPays = sc.nextInt();
+        sc.nextLine(); // consommer le reste de la ligne
+
+        String query = "DELETE FROM pays WHERE Id_pays = ?";
+
+        try (PreparedStatement pstm = dbConnect.prepareStatement(query)) {
+            pstm.setInt(1, idPays);
+
+            int n = pstm.executeUpdate();
+            if (n != 0) {
+                System.out.println(n + " ligne(s) supprimée(s)");
             } else {
-                System.out.println("Aucun pays trouvé avec le sigle " + sigle);
+                System.out.println("Record introuvable");
             }
+
         } catch (SQLException e) {
-            System.out.println("Erreur lors de la suppression : " + e.getMessage());
+            System.out.println("Erreur SQL : " + e);
         }
     }
+
+    public void afficherTousLesPays() {
+        String query = "SELECT * FROM pays";
+
+        try (Statement stmt = dbConnect.createStatement(); // Utilise la connexion existante
+             ResultSet rs = stmt.executeQuery(query);) {
+
+            while (rs.next()) {
+                int idPays = rs.getInt("Id_pays");
+                String sigle = rs.getString("sigle");
+                String nom = rs.getString("nom");
+                String langue = rs.getString("langue");
+                System.out.println("ID: " + idPays + ", Sigle: " + sigle + ", Nom: " + nom + ", Langue: " + langue);
+            }
+        } catch (SQLException e) {
+            System.out.println("Erreur SQL : " + e);
+        }
+    }
+
 
     public static void main(String[] args) {
-        GestPays gestionPays = new GestPays();
-
-        gestionPays.ajout();
-        gestionPays.recherche();
-        gestionPays.modification();
-        gestionPays.suppression();
+        GestPays gestionnaire = new GestPays();
+        gestionnaire.gestion();
     }
 }
